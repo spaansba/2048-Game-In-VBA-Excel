@@ -1,16 +1,18 @@
 Option Explicit
-Private Enum Game_Constants
+Public Enum Game_Constants
     StartCol = 3
     StartRow = 3
     Scorerow = 3
     Scorecol = 11
     MsgRow = 5
     Msgcol = 11
+    ResetRow = 9
+    ResetCol = 11
 End Enum
 Type Pressed
     Board_Changed As Boolean
 End Type
-Private Enum Colors_2024
+Public Enum Colors_2024
     Default_Play_field = 13224393
     color2 = 14083324
     color4 = 11389944
@@ -28,42 +30,12 @@ Private Enum Colors_2024
     color16384 = 16412880
     color32768 = 16196279
 End Enum
-Sub Create_Playing_Field_2048()
-'testewr rewerw
-'\ werrew
 
-Dim playing_Field As Range, i As Long, j As Long
-Set playing_Field = Get_Playing_Range_2048
-With playing_Field
-    .Font.Size = 14
-    .Font.Bold = True
-    .VerticalAlignment = -4108
-    .HorizontalAlignment = -4108
-End With
-
-Start_Game_2048
-
-End Sub
-
-Private Sub Start_Game_2048()
-'Set High Score
-Dim highscore As String, highscore_Range As Range
-Set highscore_Range = Cells(Game_Constants.Scorerow, Game_Constants.Scorecol + 1)
-highscore = GetSetting("Maestro", "Maestro_addin", "Highscore2048")
-If highscore = "" Then
-    highscore_Range = 0
-Else
-    highscore_Range = highscore
-End If
-
-'Set msg text
-Set_Msg_Text "Press the arrow keys on your keyboard to move the board around!"
-
-End Sub
-Private Sub Set_Msg_Text(msg As String)
+Public Sub Set_Msg_Text(msg As String)
 Dim Msg_Range As Range
 Set Msg_Range = Cells(Game_Constants.MsgRow, Game_Constants.Msgcol)
 Msg_Range = msg
+Set_Font Msg_Range, msg, 13, True, "Calibri", 7, -4108, , , , Range(Msg_Range, Msg_Range.Offset(0, 1)), , , True
 End Sub
 
 Public Sub User_Press(Pressed_Range As String)
@@ -129,9 +101,11 @@ Dim playing_Field As Range, cell As Range, Field_Array As Variant, i As Single, 
 Set playing_Field = Get_Playing_Range_2048
 
 'Reset the playing field
+applicationOff
 For Each cell In playing_Field
     cell.Value2 = ""
 Next cell
+applicationOn
 
 'Put 2 2's randomly on the board
 Field_Array = Player_Field_Range_To_Array(playing_Field)
@@ -151,6 +125,7 @@ Cells(Game_Constants.Scorerow, Game_Constants.Scorecol).Value2 = 0
 Set_Msg_Text "Press the arrow keys on your keyboard to move the board around!"
 
 Color_Playing_Field playing_Field
+
 End Sub
 
 'Put the addresses of the playing field in an array

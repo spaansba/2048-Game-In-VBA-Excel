@@ -1,0 +1,63 @@
+Option Explicit
+
+'for if you want to create the playing field from scratch, not needed to play the game
+Sub Create_Playing_Field_2048()
+Dim i As Single, j As Single
+Dim ws As Worksheet
+Set ws = Open_or_Create_Sheet("2048 Game", "Template_Sheet")
+applicationOff
+
+'Set background color
+ws.Cells.Interior.Color = 15921906
+
+'Set playing field
+For i = 3 To 9
+    For j = 3 To 10
+        If i Mod 2 = 0 Or j Mod 2 = 0 Then 'If i or j is even
+        
+        'For in between playing field
+        With Cells(i, j)
+            If i Mod 2 = 0 Then .RowHeight = 9
+            If j Mod 2 = 0 Then .ColumnWidth = 1
+        End With
+        
+        Else
+            'for playing field
+            Set_Font Cells(i, j), , 14, True, "Calibri", -4108, -4108, , , 13224393, , 13, 66
+        End If
+    Next j
+Next i
+
+'Set scoreboard
+Dim Score_Range As Range
+Set Score_Range = Cells(Game_Constants.Scorerow, Game_Constants.Scorecol)
+Set_Font Score_Range, "0", 14, True, "Calibri", -4108, -4108, , , , , 21
+Set_Font Score_Range.Offset(-1, 0), "Score", 14, True, "Calibri", -4108, -4108
+Set_Font Score_Range.Offset(-1, 1), "Highscore", 14, True, "Calibri", -4108, -4108
+
+Dim highscore As String, highscore_Range As Range
+Set highscore_Range = Cells(Game_Constants.Scorerow, Game_Constants.Scorecol + 1)
+highscore = GetSetting("Maestro", "Maestro_addin", "Highscore2048")
+If highscore = "" Then
+    highscore_Range = 0
+Else
+    highscore_Range = highscore
+End If
+
+Set_Font Score_Range.Offset(0, 1), highscore, 14, True, "Calibri", -4108, -4108, , , , , 21
+
+' Set msg text
+Set_Msg_Text "Press the arrow keys on your keyboard to move the board around!"
+
+'Set reset text
+Dim Reset_Range As Range
+Set Reset_Range = Cells(Game_Constants.ResetRow, Game_Constants.ResetCol)
+Set_Font Reset_Range, "Reset", 15, True, "Calibri", 7, -4108, , , , Range(Reset_Range, Reset_Range.Offset(0, 1))
+
+'Hide col/rows
+Hide_Columns_From 13
+Hide_Rows_From 16
+
+Reset_playing_Field
+applicationOn
+End Sub
