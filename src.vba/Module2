@@ -29,7 +29,9 @@ Private Enum Colors_2024
     color32768 = 16196279
 End Enum
 Sub Create_Playing_Field_2048()
-'test
+'testewr rewerw
+'\ werrew
+
 Dim playing_Field As Range, i As Long, j As Long
 Set playing_Field = Get_Playing_Range_2048
 With playing_Field
