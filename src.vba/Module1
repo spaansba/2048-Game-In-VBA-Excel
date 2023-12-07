@@ -1,0 +1,92 @@
+
+Option Private Module 'Make it so the functions dont show up on the worksheet formulas
+' Performance counter API's
+#If VBA7 And Win64 Then
+    'for 64-bit Excel
+    Declare PtrSafe Function QueryPerformanceCounter Lib "kernel32" (lpPerformanceCount As Currency) As Long
+    Declare PtrSafe Function QueryPerformanceFrequency Lib "kernel32" (lpFrequency As Currency) As Long
+#Else
+    'for 32-bit Excel
+    Declare Function QueryPerformanceCounter Lib "kernel32" (lpPerformanceCount As Currency) As Long
+    Declare Function QueryPerformanceFrequency Lib "kernel32" (lpFrequency As Currency) As Long
+#End If
+
+Public curStartCounter As Currency
+Public curEndCounter As Currency
+Public Elapsed_Time As String
+Public Basic_Question_Caller As String
+Public Enum Maestro_Settings
+    Sheet_Color = 11854022 'if we create a sheet color it like this
+End Enum
+
+'If windows wrie it to the Windows Registry
+'If InStr(1, Environ("OS"), "Windows", vbTextCompare) > 0 Then
+'    CreateObject("WScript.Shell").RegWrite "HKEY_CURRENT_USER\Software\VB and VBA Program Settings\Maestro\Maestro_addin\Wordle", correctword
+'End If
+'
+'getMySetting = GetSetting("Maestro", "Maestro_addin", "Wordle")
+Private Sub Change_Samples_Returned_Label()
+Dim total_rows As Integer, max_sample As Integer, min_sample As Integer, perc_sample As Integer, sample_size As Integer
+Dim sample_based_on_perc As Integer
+total_rows = 500
+max_sample = 100
+min_sample = 10
+perc_sample = 0
+
+sample_based_on_perc = total_rows / 100 * perc_sample
+
+Select Case True
+    Case sample_based_on_perc > min_sample And sample_based_on_perc < max_sample
+        sample_size = sample_based_on_perc
+    Case sample_based_on_perc < min_sample
+        sample_size = min_sample
+    Case sample_based_on_perc > max_sample
+        sample_size = max_sample
+End Select
+
+Debug.Print sample_size
+End Sub
+'Purpose: Measure elapsed time in milliseconds
+Public Sub StartTimer()
+On Error Resume Next
+    Dim lgResult As Long
+    lgResult = QueryPerformanceCounter(curStartCounter)
+End Sub
+
+'Purpose: Measure elapsed time in milliseconds
+Public Function Elapsed_Seconds() As String
+On Error GoTo Error_Second
+Dim lgResult As Long, curFrequency As Currency
+lgResult = QueryPerformanceCounter(curEndCounter)
+lgResult = QueryPerformanceFrequency(curFrequency)
+Elapsed_Seconds = (curEndCounter - curStartCounter) / curFrequency
+
+Exit Function
+
+Error_Second:
+Elapsed_Seconds = "Error in Elapsed_Seconds function"
+End Function
+Sub asdsadsda()
+StartTimer
+Debug.Print StrConv(123, vbFromUnicode)
+Debug.Print Elapsed_Seconds
+
+End Sub
+Public Sub applicationOff()
+With Application
+.EnableEvents = False
+.EnableAnimations = False
+.ScreenUpdating = False
+.Calculation = xlCalculationManual
+.EnableCancelKey = xlErrorHandler
+End With
+End Sub
+Public Sub applicationOn()
+With Application
+.EnableEvents = True
+.EnableAnimations = True
+.ScreenUpdating = True
+.DisplayAlerts = True
+.Calculation = xlCalculationAutomatic
+End With
+End Sub

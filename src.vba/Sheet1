@@ -1,0 +1,16 @@
+Option Explicit
+
+Private Sub Worksheet_SelectionChange(ByVal Target As Range)
+Dim Stopp As Boolean
+'Stopp = True
+If Stopp = True Then Exit Sub
+Select Case Target.Address
+    Case Range("F13").Address: End
+    Case Range("K9").Address, Range("K10").Address: Call Reset_playing_Field
+    Case Range("F12").Address: Call User_Press("UP")
+    Case Range("E13").Address: Call User_Press("LEFT")
+    Case Range("G13").Address: Call User_Press("RIGHT")
+    Case Range("F14").Address: Call User_Press("DOWN")
+End Select
+Range("F13").Select
+End Sub

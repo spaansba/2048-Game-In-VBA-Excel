@@ -1,0 +1,442 @@
+Option Explicit
+Private Enum Game_Constants
+    StartCol = 3
+    StartRow = 3
+    Scorerow = 3
+    Scorecol = 11
+    MsgRow = 5
+    Msgcol = 11
+End Enum
+Type Pressed
+    Board_Changed As Boolean
+End Type
+Private Enum Colors_2024
+    Default_Play_field = 13224393
+    color2 = 14083324
+    color4 = 11389944
+    color8 = 8696052
+    color16 = 15917529
+    color32 = 15189684
+    color64 = 14395790
+    color128 = 10348543
+    color256 = 7330815
+    color512 = 2017279
+    color1024 = 11854022
+    color2048 = 9359529
+    color4096 = 3506772
+    color8192 = 16488412
+    color16384 = 16412880
+    color32768 = 16196279
+End Enum
+Sub Create_Playing_Field_2048()
+'test
+Dim playing_Field As Range, i As Long, j As Long
+Set playing_Field = Get_Playing_Range_2048
+With playing_Field
+    .Font.Size = 14
+    .Font.Bold = True
+    .VerticalAlignment = -4108
+    .HorizontalAlignment = -4108
+End With
+
+Start_Game_2048
+
+End Sub
+
+Private Sub Start_Game_2048()
+'Set High Score
+Dim highscore As String, highscore_Range As Range
+Set highscore_Range = Cells(Game_Constants.Scorerow, Game_Constants.Scorecol + 1)
+highscore = GetSetting("Maestro", "Maestro_addin", "Highscore2048")
+If highscore = "" Then
+    highscore_Range = 0
+Else
+    highscore_Range = highscore
+End If
+
+'Set msg text
+Set_Msg_Text "Press the arrow keys on your keyboard to move the board around!"
+
+End Sub
+Private Sub Set_Msg_Text(msg As String)
+Dim Msg_Range As Range
+Set Msg_Range = Cells(Game_Constants.MsgRow, Game_Constants.Msgcol)
+Msg_Range = msg
+End Sub
+
+Public Sub User_Press(Pressed_Range As String)
+Dim playing_Field As Range, i As Long, j As Long
+Set playing_Field = Get_Playing_Range_2048
+Dim Press As Pressed
+applicationOff
+
+Select Case Pressed_Range
+    Case "RIGHT": Press = Right_Press
+    Case "LEFT": Press = Left_Press
+    Case "UP": Press = Up_Press
+    Case "DOWN": Press = Down_Press
+End Select
+
+'If playing field is full check if the game ends
+Dim Board_Is_Full As Boolean, Game_Ended As Boolean
+Board_Is_Full = Check_if_Board_Is_Full(playing_Field)
+If Board_Is_Full Then
+    Game_Ended = Check_If_Game_Ends(playing_Field)
+End If
+
+'Place new number on sheet only when the board actually changed
+If Press.Board_Changed = True And Game_Ended = False Then
+    If Not Board_Is_Full Then
+        Place_New_Number playing_Field 'if board isnt full place random number
+        Game_Ended = Check_If_Game_Ends(playing_Field) 'Check if game ended after placing the random number
+        Color_Playing_Field playing_Field
+    End If
+End If
+
+If Game_Ended Then
+    Game_End_2048
+End If
+applicationOn
+
+End Sub
+
+'When the game has ended
+Private Sub Game_End_2048()
+Dim score As Range, highscore As String
+Set score = Cells(Game_Constants.Scorerow, Game_Constants.Scorecol)
+highscore = GetSetting("Maestro", "Maestro_addin", "Highscore2048")
+If highscore = "" Then
+    CreateObject("WScript.Shell").RegWrite "HKEY_CURRENT_USER\Software\VB and VBA Program Settings\Maestro\Maestro_addin\Highscore2048", "0"
+Else
+    If highscore < score Then
+        CreateObject("WScript.Shell").RegWrite "HKEY_CURRENT_USER\Software\VB and VBA Program Settings\Maestro\Maestro_addin\Highscore2048", Str(score)
+        score.Offset(0, 1).Value = score
+    Else
+        score.Offset(0, 1).Value = highscore
+    End If
+End If
+
+'Set msg text
+Set_Msg_Text "Game ended, your final score was " & score.Value2 & "!"
+
+End Sub
+
+'Resets the playing field at the start or when clicked the new game button
+Public Sub Reset_playing_Field()
+Dim playing_Field As Range, cell As Range, Field_Array As Variant, i As Single, randomIndex As Integer, Placed As Single
+Set playing_Field = Get_Playing_Range_2048
+
+'Reset the playing field
+For Each cell In playing_Field
+    cell.Value2 = ""
+Next cell
+
+'Put 2 2's randomly on the board
+Field_Array = Player_Field_Range_To_Array(playing_Field)
+Do
+    Randomize
+    randomIndex = Int((UBound(Field_Array) - LBound(Field_Array) + 1) * Rnd) + LBound(Field_Array)
+    If Range(Field_Array(randomIndex)).Value2 = "" Then
+        Range(Field_Array(randomIndex)).Value2 = 2
+        Placed = Placed + 1
+    End If
+Loop Until Placed = 2
+
+'Set score to 0
+Cells(Game_Constants.Scorerow, Game_Constants.Scorecol).Value2 = 0
+
+'Reset Msg
+Set_Msg_Text "Press the arrow keys on your keyboard to move the board around!"
+
+Color_Playing_Field playing_Field
+End Sub
+
+'Put the addresses of the playing field in an array
+Private Function Player_Field_Range_To_Array(playing_Field As Range) As Variant
+'Put playing field in an array
+Dim i As Single, cell As Range, cellArray As Variant
+i = 1
+ReDim cellArray(1 To playing_Field.Cells.Count)
+For Each cell In playing_Field
+    cellArray(i) = cell.Address
+    i = i + 1
+Next cell
+Player_Field_Range_To_Array = cellArray
+End Function
+
+'Loop over playing field to see if there is an empty cell to fill in a random number
+Private Function Check_if_Board_Is_Full(playing_Field As Range) As Boolean
+Dim cell As Range
+Check_if_Board_Is_Full = True
+For Each cell In playing_Field
+    If cell.Value = "" Then Check_if_Board_Is_Full = False
+Next cell
+End Function
+
+Private Function Check_If_Game_Ends(playing_Field As Range) As Boolean
+Check_If_Game_Ends = True
+Dim cell As Range
+For Each cell In playing_Field
+    If Cells(cell.Row + 2, cell.Column).Value2 = cell.Value2 Then Check_If_Game_Ends = False
+    If Cells(cell.Row + -2, cell.Column).Value2 = cell.Value2 Then Check_If_Game_Ends = False
+    If Cells(cell.Row, cell.Column + 2).Value2 = cell.Value2 Then Check_If_Game_Ends = False
+    If Cells(cell.Row, cell.Column - 2).Value2 = cell.Value2 Then Check_If_Game_Ends = False
+Next cell
+End Function
+
+'Color the playing field, each number has its own color
+Sub Color_Playing_Field(playing_Field As Range)
+Dim cell As Range
+For Each cell In playing_Field
+    Select Case cell.Value
+        Case "": cell.Interior.Color = Colors_2024.Default_Play_field
+        Case 2: cell.Interior.Color = Colors_2024.color2
+        Case 4: cell.Interior.Color = Colors_2024.color4
+        Case 8: cell.Interior.Color = Colors_2024.color8
+        Case 16: cell.Interior.Color = Colors_2024.color16
+        Case 32: cell.Interior.Color = Colors_2024.color32
+        Case 64: cell.Interior.Color = Colors_2024.color64
+        Case 128: cell.Interior.Color = Colors_2024.color128
+        Case 256: cell.Interior.Color = Colors_2024.color256
+        Case 512: cell.Interior.Color = Colors_2024.color512
+        Case 1024: cell.Interior.Color = Colors_2024.color1024
+        Case 2048: cell.Interior.Color = Colors_2024.color2048
+        Case 4096: cell.Interior.Color = Colors_2024.color4096
+        Case 8192: cell.Interior.Color = Colors_2024.color8192
+        Case 16384: cell.Interior.Color = Colors_2024.color16384
+        Case 32768: cell.Interior.Color = Colors_2024.color32768
+    End Select
+Next cell
+End Sub
+
+Sub Place_New_Number(playing_Field As Range)
+Dim Field_Array As Variant, randomIndex As Integer, cell As Range, i As Single
+
+Field_Array = Player_Field_Range_To_Array(playing_Field)
+
+Do 'Randomize until we find an empty cell in the playing field
+    Randomize
+    randomIndex = Int((UBound(Field_Array) - LBound(Field_Array) + 1) * Rnd) + LBound(Field_Array)
+Loop Until Range(Field_Array(randomIndex)).Value2 = ""
+
+Range(Field_Array(randomIndex)).Value2 = 2 'When empty cell is found place the value 2 in there
+
+End Sub
+
+'Copy range and add them together
+Private Sub Copy_Range(Copy_From As Range, Copy_To As Range, Found As Boolean, Press As Pressed, score As Long)
+score = Copy_From.Value2 * 2
+Copy_To.Value2 = score 'Score is same as new value
+Add_Score_To_Scoreboard score
+Copy_From = ""
+Found = True
+Press.Board_Changed = True
+End Sub
+
+'Add score tot the scoreboard, or reset it
+Private Sub Add_Score_To_Scoreboard(Range_to_Add As Long, Optional Reset_Board As Boolean = False)
+Dim Score_Range As Range
+Set Score_Range = Cells(Game_Constants.Scorerow, Game_Constants.Scorecol)
+If Reset_Board Then
+    Score_Range = 0
+Else
+    Score_Range = Score_Range + Range_to_Add
+End If
+End Sub
+
+'Get the playing field range
+Function Get_Playing_Range_2048() As Range
+Dim i As Single, j As Single
+Set Get_Playing_Range_2048 = Cells(Game_Constants.StartRow, Game_Constants.StartCol)
+For i = 3 To 9 Step 2
+    For j = 3 To 9 Step 2
+        Set Get_Playing_Range_2048 = Union(Get_Playing_Range_2048, Cells(i, j))
+    Next j
+Next i
+End Function
+Private Function Right_Press() As Pressed
+Dim cell As Range, testValue As Long, Found As Boolean, score As Long, i As Long, j As Long
+    For i = 3 To 9 Step 2
+        score = 0
+        For j = 3 To 7 Step 2
+            testValue = Cells(i, j).Value
+            If testValue <> 0 Then 'Skip cell if value is nothing
+                Found = False
+                
+                If Cells(i, j + 2).Value = testValue And Cells(i, j + 2).Value <> score And Not Found Then
+                    Copy_Range Cells(i, j), Cells(i, j + 2), Found, Right_Press, score
+                ElseIf Cells(i, j + 2).Value <> "" Then Found = True 'if the value doesnt match and its not an empty cell it means they cant combine
+                End If
+
+                If Cells(i, j + 4).Value = testValue And Cells(i, j + 4).Value <> score And Not Found Then
+                    Copy_Range Cells(i, j), Cells(i, j + 4), Found, Right_Press, score
+                ElseIf Cells(i, j + 4).Value <> "" Then Found = True
+                End If
+            
+                If Cells(i, j + 6).Value = testValue And Cells(i, j + 6).Value <> score And Not Found Then
+                    Copy_Range Cells(i, j), Cells(i, j + 6), Found, Right_Press, score
+                End If
+            
+            End If
+            
+            'Move the rows to the right on last loop in each row
+            Dim x As Single, All_Right As Boolean
+            If j = 7 Then
+                Do
+                    All_Right = False 'If this turns on it means there was one swithc, means we run it again to see if it has to change another time
+                    For x = 7 To 3 Step -2
+                        If Cells(i, x) <> "" Then
+                            If Cells(i, x + 2) = "" Then
+                                All_Right = True
+                                Right_Press.Board_Changed = True
+                                Cells(i, x + 2) = Cells(i, x)
+                                Cells(i, x) = ""
+                            End If
+                        End If
+                    Next x
+                Loop Until All_Right = False
+            End If
+        Next j
+    Next i
+End Function
+
+Private Function Left_Press() As Pressed
+Dim cell As Range, testValue As Long, Found As Boolean, score As Long, i As Long, j As Long
+    For i = 3 To 9 Step 2
+        score = 0
+        For j = 9 To 3 Step -2
+            testValue = Cells(i, j).Value
+            If testValue <> 0 Then 'Skip cell if value is nothing
+                Found = False
+                
+                If Cells(i, j - 2).Value = testValue And Cells(i, j - 2).Value <> score And Not Found Then
+                    Copy_Range Cells(i, j), Cells(i, j - 2), Found, Left_Press, score
+                ElseIf Cells(i, j - 2).Value <> "" Then Found = True 'if the value doesnt match and its not an empty cell it means they cant combine
+                End If
+                
+                If j <> 3 Then
+                    If Cells(i, j - 4).Value = testValue And Cells(i, j - 4).Value <> score And Not Found Then
+                        Copy_Range Cells(i, j), Cells(i, j - 4), Found, Left_Press, score
+                    ElseIf Cells(i, j - 4).Value <> "" Then Found = True
+                    End If
+                End If
+                If j <> 5 And j <> 3 Then
+                    If Cells(i, j - 6).Value = testValue And Cells(i, j - 6).Value <> score And Not Found Then
+                        Copy_Range Cells(i, j), Cells(i, j - 6), Found, Left_Press, score
+                    End If
+                End If
+                
+                
+            End If
+            
+            'Move the rows to the right on last loop in each row
+            Dim x As Single, All_Left As Boolean
+            If j = 3 Then
+                Do
+                    All_Left = False 'If this turns on it means there was one switch, means we run it again to see if it has to change another time
+                    For x = 5 To 9 Step 2
+                        If Cells(i, x) <> "" Then
+                            If Cells(i, x - 2) = "" Then
+                                All_Left = True
+                                Left_Press.Board_Changed = True
+                                Cells(i, x - 2) = Cells(i, x)
+                                Cells(i, x) = ""
+                            End If
+                        End If
+                    Next x
+                Loop Until All_Left = False
+            End If
+        Next j
+    Next i
+End Function
+Sub Scorboard_Change()
+Private Function Up_Press() As Pressed
+Dim cell As Range, testValue As Long, Found As Boolean, score As Long, i As Long, j As Long
+    For i = 9 To 3 Step -2
+        score = 0
+        For j = 9 To 3 Step -2
+            testValue = Cells(i, j).Value
+            If testValue <> 0 Then 'Skip cell if value is nothing
+                Found = False
+                If Cells(i - 2, j).Value = testValue And Cells(i - 2, j).Value <> score And Not Found Then
+                    Copy_Range Cells(i, j), Cells(i - 2, j), Found, Up_Press, score
+                ElseIf Cells(i - 2, j).Value <> "" Then Found = True 'if the value doesnt match and its not an empty cell it means they cant combine
+                End If
+                
+                If i <> 3 Then
+                    If Cells(i - 4, j).Value = testValue And Cells(i - 4, j).Value <> score And Not Found Then
+                        Copy_Range Cells(i, j), Cells(i - 4, j), Found, Up_Press, score
+                    ElseIf Cells(i - 4, j).Value <> "" Then Found = True
+                    End If
+                End If
+                If i <> 5 And i <> 3 Then
+                    If Cells(i - 6, j).Value = testValue And Cells(i - 6, j).Value <> score And Not Found Then
+                        Copy_Range Cells(i, j), Cells(i - 6, j), Found, Up_Press, score
+                    End If
+                End If
+            End If
+            
+            'Move the rows up on last loop in each row
+            Dim x As Single, All_Up As Boolean
+            If j = 3 Then
+                Do
+                    All_Up = False 'If this turns on it means there was one switch, means we run it again to see if it has to change another time
+                    For x = 5 To 9 Step 2
+                        If Cells(x, i) <> "" Then
+                            If Cells(x - 2, i) = "" Then
+                                All_Up = True
+                                Up_Press.Board_Changed = True
+                                Cells(x - 2, i) = Cells(x, i)
+                                Cells(x, i) = ""
+                            End If
+                        End If
+                    Next x
+                Loop Until All_Up = False
+            End If
+        Next j
+    Next i
+End Function
+
+Private Function Down_Press() As Pressed
+Dim cell As Range, testValue As Long, Found As Boolean, score As Long, i As Long, j As Long
+    For j = 3 To 9 Step 2 'J and I are turned around for Down
+        score = 0
+        For i = 3 To 9 Step 2
+            testValue = Cells(i, j).Value
+            If testValue <> 0 Then 'Skip cell if value is nothing
+                Found = False
+                If Cells(i + 2, j).Value = testValue And Cells(i + 2, j).Value <> score And Not Found Then
+                    Copy_Range Cells(i, j), Cells(i + 2, j), Found, Down_Press, score
+                ElseIf Cells(i + 2, j).Value <> "" Then Found = True 'if the value doesnt match and its not an empty cell it means they cant combine
+                End If
+                
+                If Cells(i + 4, j).Value = testValue And Cells(i + 4, j).Value <> score And Not Found Then
+                    Copy_Range Cells(i, j), Cells(i + 4, j), Found, Down_Press, score
+                ElseIf Cells(i + 4, j).Value <> "" Then Found = True
+                End If
+
+                If Cells(i + 6, j).Value = testValue And Cells(i + 6, j).Value <> score And Not Found Then
+                    Copy_Range Cells(i, j), Cells(i + 6, j), Found, Down_Press, score
+                End If
+            End If
+            
+            'Move the rows down on last loop in each row
+            Dim x As Single, All_Down As Boolean
+            If i = 9 Then
+                Do
+                    All_Down = False 'If this turns on it means there was one switch, means we run it again to see if it has to change another time
+                    For x = 7 To 3 Step -2
+                        If Cells(x, j) <> "" Then
+                            If Cells(x + 2, j) = "" Then
+                                All_Down = True
+                                Down_Press.Board_Changed = True
+                                Cells(x + 2, j) = Cells(x, j)
+                                Cells(x, j) = ""
+                            End If
+                        End If
+                    Next x
+                Loop Until All_Down = False
+            End If
+        Next i
+    Next j
+End Function
